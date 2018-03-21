@@ -1918,6 +1918,11 @@ class DefineSubmechanism(Operator):
 
     def execute(self, context):
         joints = context.selected_objects
+
+        # display names to simplify assignment
+        for joint in joints:
+            joint.show_name = True
+
         mechanismdata = defs.definitions['submechanisms'][self.mechanism_type]
         size = mechanismdata['size']
         if len(joints) == size:
