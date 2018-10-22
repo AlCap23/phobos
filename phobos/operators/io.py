@@ -934,6 +934,80 @@ class ExportAllPosesOperator(Operator):
         return {'FINISHED'}
 
 
+class ImportCSVAnimation(bpy.types.Operator):
+    """Import robot model file from various formats"""
+
+    bl_idname = "phobos.import_csv_animation"
+    bl_label = "Import csv Data"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'FILE'
+
+    # creating property for storing the path to the .scn file
+    filepath = bpy.props.StringProperty(subtype="FILE_PATH")
+    header = bpy.props.IntProperty(name = "Skip rows", default = 5, description = "Rows to skip")
+    delimiter = bpy.props.StringProperty(name = "delimiter", default = ";", description = "Delimiter of the file" )
+    use_names = bpy.props.BoolProperty(name = "Use names", default = True, description = "Use names from file")
+    
+    names = bpy.props.EnumProperty(names, name = "CSV header", description = "Names of the csv file", default = None, update= None, get = None, set = None)
+    @classmethod
+    def poll(cls, context):
+        """
+
+        Args:
+          context: 
+
+        Returns:
+
+        """
+        return context is not None
+
+    def execute(self, context):
+        """
+
+        Args:
+          context: 
+
+        Returns:
+
+        """
+        
+        # Run the matching dialog
+        # Find joints
+        joint_list = [
+        obj for obj in bpy.context.scene.objects
+        if ((obj.phobostype  == "link") and ("joint/type" in obj))]
+        
+        self.joints = bpy.props.EnumProperty(items = joint_list, description = "List of joints")
+
+        return {'FINISHED'}
+
+    def read_csv(self, context):
+        log("Importing " + self.filepath + ' as animation file.', "INFO")
+               # Import the csv file
+        names, data = ioUtils.import_csv(
+            filepath = self.filepath,
+            skip_header= self.header,
+            delimiter = self.delimiter,
+            names = self.use_names
+            )
+        return names, data
+
+    def invoke(self, context, event):
+        """
+
+        Args:
+          context: 
+          event: 
+
+        Returns:
+
+        """
+        self.filepath = bUtils.getPhobosPreferences().modelsfolder
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+
+
 def register():
     """TODO Missing documentation"""
     print("Registering operators.io...")
@@ -946,3 +1020,4 @@ def unregister():
     print("Unregistering operators.io...")
     for key, classdef in inspect.getmembers(sys.modules[__name__], inspect.isclass):
         bpy.utils.unregister_class(classdef)
+

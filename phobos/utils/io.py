@@ -23,6 +23,7 @@ import shutil
 import sys
 import os
 import bpy
+import numpy
 
 from phobos import defs
 from phobos import display
@@ -584,3 +585,21 @@ def exportScene(
             scene_types[scenetype]['export'](
                 scenedict['entities'], os.path.join(exportpath, scenedict['name'])
             )
+
+
+def import_csv(filepath, skip_header = 0, delimiter = ",", names = True):
+    """Imports a csv file for visualization.
+    """
+
+    # Import the csv
+    try:
+        data = numpy.genfromtxt(filepath, delimiter = delimiter, skip_header = skip_header, names = names)
+        if names:
+            names = data.dtype.names
+        else:
+            names = None
+
+    except KeyError as err:
+        log("Error : {} not a valid csv file.".format(filepath), level = "ERROR")
+
+    return names, data
