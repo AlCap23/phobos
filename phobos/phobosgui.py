@@ -1305,7 +1305,7 @@ class PhobosImportPanel(bpy.types.Panel):
 
         """
         self.layout.operator("phobos.import_robot_model", text="Import Robot Model", icon="IMPORT")
-        self.layout.operator("phobos.import_csv_animation", text = "Import csv file", icon= "IMPORT")
+        self.layout.operator("phobos.import_csv_data", text = "Import CSV Data", icon= "IMPORT")
 
 
 class PhobosSubmodelsPanel(bpy.types.Panel):

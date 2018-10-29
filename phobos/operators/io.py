@@ -935,20 +935,20 @@ class ExportAllPosesOperator(Operator):
 
 
 class ImportCSVAnimation(bpy.types.Operator):
-    """Import robot model file from various formats"""
+    """Import CSV data to use for visualization"""
 
-    bl_idname = "phobos.import_csv_animation"
-    bl_label = "Import csv Data"
+    bl_idname = "phobos.import_csv_data"
+    bl_label = "Import Animation Data"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'FILE'
 
     # creating property for storing the path to the .scn file
     filepath = bpy.props.StringProperty(subtype="FILE_PATH")
+    data_id = bpy.props.StringProperty(name = "Data ID", default = "CSV_Data", description = "Blender name for the data")
     header = bpy.props.IntProperty(name = "Skip rows", default = 5, description = "Rows to skip")
     delimiter = bpy.props.StringProperty(name = "delimiter", default = ";", description = "Delimiter of the file" )
     use_names = bpy.props.BoolProperty(name = "Use names", default = True, description = "Use names from file")
     
-    names = bpy.props.EnumProperty(names, name = "CSV header", description = "Names of the csv file", default = None, update= None, get = None, set = None)
     @classmethod
     def poll(cls, context):
         """
@@ -970,20 +970,23 @@ class ImportCSVAnimation(bpy.types.Operator):
         Returns:
 
         """
-        
-        # Run the matching dialog
-        # Find joints
-        joint_list = [
-        obj for obj in bpy.context.scene.objects
-        if ((obj.phobostype  == "link") and ("joint/type" in obj))]
-        
-        self.joints = bpy.props.EnumProperty(items = joint_list, description = "List of joints")
 
+        # Import the csv
+        names, data = self.read_csv(context)
+        
+        # Create a new data block
+        new_data = bpy.data.objects.new("{}".format(self.data_id), None)
+        # Add the csv data as 
+        for name in names:
+            new_data[name] = list(data[name])
+        context.scene.objects.link(new_data)
+        context.scene.update()
+        log("Imported " + self.filepath + ' as {}.'.format(self.data_id), "INFO")
         return {'FINISHED'}
 
     def read_csv(self, context):
-        log("Importing " + self.filepath + ' as animation file.', "INFO")
-               # Import the csv file
+        
+        # Import the csv file
         names, data = ioUtils.import_csv(
             filepath = self.filepath,
             skip_header= self.header,
