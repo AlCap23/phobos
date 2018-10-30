@@ -588,31 +588,32 @@ def exportScene(
             )
 
 
-def import_csv(filepath, skip_header = 0, delimiter = ",", names = True):
-    """Imports a csv file for visualization.
+def import_csv(filepath, skip_header = 0, delimiter = ","):
+    """Imports a csv file and returns a dictionary.
     """
 
     # Import the csv
+    data_dict = {}
     try:
-        data = numpy.genfromtxt(filepath, delimiter = delimiter, skip_header = skip_header, names = names)
-        if names:
-            names = data.dtype.names
-        else:
-            names = None
-
+        data = numpy.genfromtxt(filepath, delimiter = delimiter, skip_header = skip_header, names = True)
+        names = data.dtype.names
+        for name in names:
+            data_dict.update({name : list(data[name])})
     except KeyError as err:
         log("Error : {} not a valid csv file.".format(filepath), level = "ERROR")
+        return {}
 
-    return names, data
+    return data_dict
 
-def create_Reachability(obj, column_dict):
+def create_Reachability(obj, column_dict, name, size, shape):
     """Creates a reachability map from a given csv data object.
     """
+
+    from phobos.utils.editing import parentObjectsTo
+
     # Dict should have structure like:
     # x : Columnname, y: columnname ...
     # m : Measurement, e.g. Dexterity measure
-
-    from phobos.utils.editing import parentObjectsTo
 
     # Gather the coordinates
     vertices = []
@@ -627,9 +628,9 @@ def create_Reachability(obj, column_dict):
 
     for i in range(vertices.shape[1]):
         coordinates.append(tuple(vertices[:, i]))
-    # Create the colormap
+    # Normalize the measurement
     try:
-        measurement = numpy.array(obj[column_dict['m']])
+        measurement = numpy.array(obj[column_dict['w']])
         min_val = numpy.max(measurement)
         max_val = numpy.min(measurement)
         normalized = (measurement - min_val)/(max_val - min_val)
@@ -640,7 +641,7 @@ def create_Reachability(obj, column_dict):
     # Start the visualization
 
     # Create a mesh
-    mesh = bpy.data.meshes.new("Visualization")
+    mesh = bpy.data.meshes.new(name)
     mesh.update()
     mesh.validate()
 
@@ -648,13 +649,33 @@ def create_Reachability(obj, column_dict):
     
     # Add a mesh obj
     scene = bpy.context.scene
-    mesh_obj = bpy.data.objects.new("Visualization", mesh)
+    mesh_obj = bpy.data.objects.new(name, mesh)
+    mesh_obj['phobostype'] = 'data'
+    for i in range(20):
+        mesh_obj.layers[i] = ( i == defs.layerTypes["data"])
     scene.objects.link(mesh_obj)
     sUtils.selectObjects([mesh_obj])
 
     # Add the visualization obj
-    bpy.ops.mesh.primitive_uv_sphere_add(size = 0.005)
-    viz_mesh = bpy.context.object
+    #bpy.ops.mesh.primitive_uv_sphere_add(size = 0.0025)
+    mesh_name = nUtils.getUniqueName(name + '_Primitve', bpy.data.objects)
+    if shape == 'sphere':
+        viz_mesh = bUtils.createPrimitive(
+            mesh_name,
+            'sphere',
+            size,
+            defs.layerTypes["data"],
+            phobostype = 'data',
+        )
+    else:
+        viz_mesh = bUtils.createPrimitive(
+            mesh_name,
+            'box',
+            (size, ) * 3,
+            defs.layerTypes["data"],
+            phobostype = 'data',
+        )
+    
 
     # Add a particle system
     material_name = "Visualization_Mat"
@@ -697,8 +718,8 @@ def create_Reachability(obj, column_dict):
         for point_index, point in enumerate(coordinates):
             column_offset = point_index * 4
             row_offset = j * 4 * num_points
-            local_pixels[row_offset + column_offset] = 1 - normalized[point_index] 
-            local_pixels[row_offset + column_offset +1] = normalized[point_index]
+            local_pixels[row_offset + column_offset] =  1 - normalized[point_index] 
+            local_pixels[row_offset + column_offset +1] =  normalized[point_index]
             local_pixels[row_offset + column_offset + 2] = 0 
     image.pixels = local_pixels[:]
 
@@ -726,5 +747,5 @@ def create_Reachability(obj, column_dict):
         settings.render_type = 'OBJECT'
         settings.dupli_object = viz_mesh
 
-    bpy.context.scene.update
-    return None
+    parentObjectsTo([viz_mesh], mesh_obj, clear = True)
+    return mesh_obj

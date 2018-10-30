@@ -599,3 +599,126 @@ def unregister():
     del bpy.types.WindowManager.drawing_status
 
     bpy.utils.unregister_class(DisplayInformationOperator)
+
+
+class DrawDexterity(Operator):
+    """Draw reachability map given a data object.
+    """ 
+
+    bl_idname = "phobos.draw_dexterity"
+    bl_label = "Draw Dexterity Map"
+    bl_icon = 'WORLD_DATA'
+    bl_options = {'UNDO'}
+
+    def datalist(self, context):
+    # creating property for storing the path to the .scn file
+        items = []
+        for obj in context.selected_objects:
+            if obj.phobostype == 'data':
+                items += [(prop, prop, '' )for prop in obj.keys() if 'data/' in prop]
+        
+        return items
+
+
+    vis_name = bpy.props.StringProperty(name = "Visualization ID", default = "Viz_", description = "Name of the visualization")
+    data_x = bpy.props.EnumProperty(
+        items = datalist,
+        description = "Available data",
+        name = "Data"
+    )
+    data_y = bpy.props.EnumProperty(
+        items = datalist,
+        description = "Available data",
+        name = "Data"
+    )
+    data_z = bpy.props.EnumProperty(
+        items = datalist,
+        description = "Available data",
+        name = "Data"
+    )
+    data_w = bpy.props.EnumProperty(
+        items = datalist,
+        description = "Available data",
+        name = "Data"
+    )
+
+    vis_size = bpy.props.FloatProperty(
+        name = "Visualization Size", default = 0.0025, description = "Size of the primitives"
+    )
+
+    vis_shape = bpy.props.EnumProperty(
+        name = "Visualization Shape", default = 'sphere', description = "Shape of the objects",
+        items = [('sphere', 'Sphere', ''), ('box', 'Box', '')]
+    )
+    @classmethod
+    def poll(cls, context):
+        """
+
+        Args:
+          context: 
+
+        Returns:
+
+        """
+        
+        return context.selected_objects is not None and len(context.selected_objects) == 1 and bool(
+            {'data'}
+            & set([o.phobostype for o in context.selected_objects])
+        )
+
+
+    def invoke(self, context, event):
+
+        return context.window_manager.invoke_props_dialog(self)
+
+    def draw(self, context):
+        """
+
+        Args:
+          context: 
+
+        Returns:
+
+        """ 
+   
+        layout = self.layout
+        layout.prop(self, 'vis_name')
+        layout.prop(self, 'vis_shape')
+        layout.prop(self, 'vis_size')
+        layout.separator()
+        layout.prop(self, 'data_x', text='X')
+        layout.prop(self, 'data_y', text = 'Y')
+        layout.prop(self, 'data_z', text = 'Z')
+        layout.prop(self, 'data_w', text = 'Measurement')
+
+    def check(self, context):
+
+        return True
+    
+    def execute(self, context):
+
+        from phobos.utils.io import create_Reachability
+        from phobos.utils.editing import parentObjectsTo
+
+        # Make a dictionary
+        data_dict = {
+            'x' : self.data_x,
+            'y' : self.data_y,
+            'z' : self.data_z,
+            'w' : self.data_w
+        }
+
+        # Create a mapping
+        mesh_obj = create_Reachability(
+            context.selected_objects[0],
+            data_dict,
+            self.vis_name,
+            self.vis_size,
+            self.vis_shape
+        )
+
+        parentObjectsTo([mesh_obj], context.selected_objects[0], clear = True)
+
+        return {'FINISHED'}
+
+

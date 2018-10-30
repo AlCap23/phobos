@@ -50,6 +50,7 @@ layerTypes = {
     'interface': 10,
     'submodel': 10,
     'annotation': 14,
+    'data': 15,
 }
 
 # types of blender objects phobos differentiates
@@ -69,6 +70,7 @@ phobostypes = (
     ('interface',) * 3,
     ('submodel',) * 3,
     ('annotation',) * 3,
+    ('data',) * 3,
 )
 
 jointtypes = (

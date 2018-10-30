@@ -947,7 +947,7 @@ class ImportCSVAnimation(bpy.types.Operator):
     data_id = bpy.props.StringProperty(name = "Data ID", default = "CSV_Data", description = "Blender name for the data")
     header = bpy.props.IntProperty(name = "Skip rows", default = 5, description = "Rows to skip")
     delimiter = bpy.props.StringProperty(name = "delimiter", default = ";", description = "Delimiter of the file" )
-    use_names = bpy.props.BoolProperty(name = "Use names", default = True, description = "Use names from file")
+
     
     @classmethod
     def poll(cls, context):
@@ -972,28 +972,29 @@ class ImportCSVAnimation(bpy.types.Operator):
         """
 
         # Import the csv
-        names, data = self.read_csv(context)
-        
-        # Create a new data block
-        new_data = bpy.data.objects.new("{}".format(self.data_id), None)
-        # Add the csv data as 
-        for name in names:
-            new_data[name] = list(data[name])
-        context.scene.objects.link(new_data)
-        context.scene.update()
-        log("Imported " + self.filepath + ' as {}.'.format(self.data_id), "INFO")
-        return {'FINISHED'}
-
-    def read_csv(self, context):
-        
-        # Import the csv file
-        names, data = ioUtils.import_csv(
+        data_dict = ioUtils.import_csv(
             filepath = self.filepath,
             skip_header= self.header,
-            delimiter = self.delimiter,
-            names = self.use_names
+            delimiter = self.delimiter
             )
-        return names, data
+        
+        # Create a new data block
+        data_name = nUtils.getUniqueName(self.data_id , bpy.data.objects)
+        print(data_name)
+        new_data = bUtils.createPrimitive(
+            pname = data_name,
+            ptype = 'box',
+            psize = (0.05, ) * 3,
+            player = defs.layerTypes["data"],
+            phobostype = 'data'
+        )
+        
+        eUtils.setProperties(new_data, data_dict, 'data')
+        #eUtils.setProperties(new_data, data_dict, 'data')
+   
+        log("Imported " + self.filepath + ' as {}.'.format(data_name), "INFO")
+        return {'FINISHED'}
+
 
     def invoke(self, context, event):
         """

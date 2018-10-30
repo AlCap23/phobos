@@ -1305,7 +1305,7 @@ class PhobosImportPanel(bpy.types.Panel):
 
         """
         self.layout.operator("phobos.import_robot_model", text="Import Robot Model", icon="IMPORT")
-        self.layout.operator("phobos.import_csv_data", text = "Import CSV Data", icon= "IMPORT")
+        
 
 
 class PhobosSubmodelsPanel(bpy.types.Panel):
@@ -1449,6 +1449,7 @@ class PhobosDisplayPanel(bpy.types.Panel):
 
         if not wm.drawing_status:
             layout.operator('phobos.display_information', icon='INFO')
+            
         else:
             layout.prop(wm, 'drawing_status', icon='INFO')
             layout.separator()
@@ -1463,7 +1464,9 @@ class PhobosDisplayPanel(bpy.types.Panel):
             dc2.prop(wm, "draw_messages")
             dc2.prop(wm, 'phobos_msg_count')
             dc2.prop(wm, 'phobos_msg_offset')
-
+        # Add the import data panel
+        self.layout.operator("phobos.import_csv_data", text = "Import CSV Data", icon= "IMPORT")
+        self.layout.operator("phobos.draw_dexterity", text = "Draw Reachability Map")
 
 def register():
     """TODO Missing documentation"""
