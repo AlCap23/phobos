@@ -623,7 +623,10 @@ def create_Reachability(obj, column_dict):
             log("Error : {} not a valid key inside the supplied data.".format(coordinates), level = "ERROR")
 
     vertices = numpy.array(vertices)
+    coordinates = []
 
+    for i in range(vertices.shape[1]):
+        coordinates.append(tuple(vertices[:, i]))
     # Create the colormap
     try:
         measurement = numpy.array(obj[column_dict['m']])
@@ -634,21 +637,94 @@ def create_Reachability(obj, column_dict):
         log("No measurement data found!", level = "ERROR")
         pass
 
-    last_obj = None
-    for i in range(1000): #vertices.shape[1]
-        # Create a new sphere
-        #sphere_obj = bUtils.createPrimitive('Visualization', 'sphere', 0.005, 8, plocation=(vertices[0, i], vertices[1, i], vertices[2, i]))
-        bpy.ops.mesh.primitive_uv_sphere_add(segments = 8, ring_count = 4, size = 0.005, location = (vertices[0, i], vertices[1, i], vertices[2, i]))
-        sphere_obj = bpy.context.active_object
-        # Set the color
-        sphere_obj.color = [normalized[i], 0, 0, 0]
-        if last_obj:
-            sUtils.selectObjects([sphere_obj, last_obj], clear = True, active = 0)
-            bpy.ops.object.join()
-        last_obj = sphere_obj
-        
-    last_obj.name = "Visualization"
+    # Start the visualization
 
-   
+    # Create a mesh
+    mesh = bpy.data.meshes.new("Visualization")
+    mesh.update()
+    mesh.validate()
 
+    mesh.from_pydata(coordinates, [], [])
+    
+    # Add a mesh obj
+    scene = bpy.context.scene
+    mesh_obj = bpy.data.objects.new("Visualization", mesh)
+    scene.objects.link(mesh_obj)
+    sUtils.selectObjects([mesh_obj])
+
+    # Add the visualization obj
+    bpy.ops.mesh.primitive_uv_sphere_add(size = 0.005)
+    viz_mesh = bpy.context.object
+
+    # Add a particle system
+    material_name = "Visualization_Mat"
+    material = bpy.data.materials.new(name = material_name)
+    material.diffuse_color = (1, 0, 0) 
+    material.use_transparency = True
+    viz_mesh.data.materials.append(material)
+
+    # Add the material in cylces
+    bpy.context.scene.render.engine = 'CYCLES'
+    material.use_nodes = True
+    node_tree = material.node_tree
+
+    if 'Material Output' in node_tree.nodes:
+        material_output_node = node_tree.nodes['Material Output']
+    else:
+        material_output_node = node_tree.nodes.new('ShaderNodeOutputMaterial')
+    
+    if 'Diffuse BSDF' in node_tree.nodes:
+        diffuse_node = node_tree.nodes['Diffuse BSDF']
+    else:
+        diffuse_node = node_tree.nodes.new("ShaderNodeBsdfDiffuse")
+    node_tree.links.new(diffuse_node.outputs['BSDF'], material_output_node.inputs['Surface'])
+    
+    if 'Image Texture' in node_tree.nodes:
+        image_texture_node = node_tree.nodes['Image Texture']
+    else:
+        image_texture_node = node_tree.nodes.new("ShaderNodeTexImage")
+    node_tree.links.new(image_texture_node.outputs['Color'], diffuse_node.inputs['Color'])
+    
+    vis_image_height = 1
+    
+    # To view the texture we set the height of the texture to vis_image_height 
+    image = bpy.data.images.new('ParticleColor', len(coordinates), vis_image_height)
+
+    local_pixels = list(image.pixels[:])
+    num_points = vertices.shape[1]
+
+    for j in range(vis_image_height):
+        for point_index, point in enumerate(coordinates):
+            column_offset = point_index * 4
+            row_offset = j * 4 * num_points
+            local_pixels[row_offset + column_offset] = 1 - normalized[point_index] 
+            local_pixels[row_offset + column_offset +1] = normalized[point_index]
+            local_pixels[row_offset + column_offset + 2] = 0 
+    image.pixels = local_pixels[:]
+
+    image_texture_node.image = image
+    particle_info_node = node_tree.nodes.new('ShaderNodeParticleInfo')
+    divide_node = node_tree.nodes.new('ShaderNodeMath')
+    divide_node.operation = 'DIVIDE'
+    node_tree.links.new(particle_info_node.outputs['Index'], divide_node.inputs[0])
+    divide_node.inputs[1].default_value = num_points
+    shader_node_combine = node_tree.nodes.new('ShaderNodeCombineXYZ')
+    node_tree.links.new(divide_node.outputs['Value'], shader_node_combine.inputs['X'])
+    node_tree.links.new(shader_node_combine.outputs['Vector'], image_texture_node.inputs['Vector'])
+
+    if len(mesh_obj.particle_systems) == 0:
+        mesh_obj.modifiers.new("particle sys", type='PARTICLE_SYSTEM')
+        particle_sys = mesh_obj.particle_systems[0]
+        settings = particle_sys.settings
+        settings.type = 'HAIR'
+        settings.use_advanced_hair = True
+        settings.emit_from = 'VERT'
+        settings.count = len(coordinates)
+        # The final object extent is hair_length * obj.scale 
+        settings.hair_length = 100           # This must not be 0
+        settings.use_emit_random = False
+        settings.render_type = 'OBJECT'
+        settings.dupli_object = viz_mesh
+
+    bpy.context.scene.update
     return None
