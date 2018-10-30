@@ -38,6 +38,7 @@ from phobos.utils import naming as nUtils
 from phobos.utils import blender as bUtils
 
 
+
 indent = '  '
 xmlHeader = '<?xml version="1.0"?>\n<!-- created with Phobos ' + defs.version + ' -->\n'
 
@@ -603,3 +604,51 @@ def import_csv(filepath, skip_header = 0, delimiter = ",", names = True):
         log("Error : {} not a valid csv file.".format(filepath), level = "ERROR")
 
     return names, data
+
+def create_Reachability(obj, column_dict):
+    """Creates a reachability map from a given csv data object.
+    """
+    # Dict should have structure like:
+    # x : Columnname, y: columnname ...
+    # m : Measurement, e.g. Dexterity measure
+
+    from phobos.utils.editing import parentObjectsTo
+
+    # Gather the coordinates
+    vertices = []
+    for i,coordinates in enumerate(['x', 'y', 'z']):
+        try:
+            vertices.append(obj[column_dict[coordinates]])
+        except KeyError as err:
+            log("Error : {} not a valid key inside the supplied data.".format(coordinates), level = "ERROR")
+
+    vertices = numpy.array(vertices)
+
+    # Create the colormap
+    try:
+        measurement = numpy.array(obj[column_dict['m']])
+        min_val = numpy.max(measurement)
+        max_val = numpy.min(measurement)
+        normalized = (measurement - min_val)/(max_val - min_val)
+    except:
+        log("No measurement data found!", level = "ERROR")
+        pass
+
+    last_obj = None
+    for i in range(1000): #vertices.shape[1]
+        # Create a new sphere
+        #sphere_obj = bUtils.createPrimitive('Visualization', 'sphere', 0.005, 8, plocation=(vertices[0, i], vertices[1, i], vertices[2, i]))
+        bpy.ops.mesh.primitive_uv_sphere_add(segments = 8, ring_count = 4, size = 0.005, location = (vertices[0, i], vertices[1, i], vertices[2, i]))
+        sphere_obj = bpy.context.active_object
+        # Set the color
+        sphere_obj.color = [normalized[i], 0, 0, 0]
+        if last_obj:
+            sUtils.selectObjects([sphere_obj, last_obj], clear = True, active = 0)
+            bpy.ops.object.join()
+        last_obj = sphere_obj
+        
+    last_obj.name = "Visualization"
+
+   
+
+    return None
