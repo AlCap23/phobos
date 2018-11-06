@@ -1466,7 +1466,8 @@ class PhobosDisplayPanel(bpy.types.Panel):
             dc2.prop(wm, 'phobos_msg_offset')
         # Add the import data panel
         self.layout.operator("phobos.import_csv_data", text = "Import CSV Data", icon= "IMPORT")
-        self.layout.operator("phobos.draw_dexterity", text = "Draw Reachability Map")
+        self.layout.operator("phobos.draw_dexterity", text = "Draw Reachability Map", icon='WORLD_DATA')
+        self.layout.operator("phobos.animate_csv", text = "Animate Data", icon='WORLD_DATA')
 
 def register():
     """TODO Missing documentation"""

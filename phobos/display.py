@@ -722,3 +722,96 @@ class DrawDexterity(Operator):
         return {'FINISHED'}
 
 
+class PropertyContainer(bpy.types.PropertyGroup):
+    name = bpy.props.StringProperty()
+    enum = bpy.props.EnumProperty()
+
+    def set(self, enumProp):
+        self.enum = enumProp
+
+class AnimateData(Operator):
+    """Creates an animation of given Data
+    """ 
+    
+
+    bl_idname = "phobos.animate_csv"
+    bl_label = "Create Animation"
+    bl_options = {'UNDO'}
+
+    operator_data = bpy.props.CollectionProperty(type = PropertyContainer)
+
+    def datalist(self, context):
+      # creating property for storing the path to the .scn file
+      items = []
+      for obj in context.selected_objects:
+          if obj.phobostype == 'data':
+              items += [(prop, prop, '' )for prop in obj.keys() if 'data/' in prop]
+
+      return items
+
+
+        
+    @classmethod
+    def poll(cls, context):
+        """
+
+        Args:
+          context: 
+
+        Returns:
+
+        """
+        
+        return context.selected_objects is not None and bool(
+            {'data', 'joint'}
+            & set([o.phobostype for o in context.selected_objects])
+        )
+
+
+    def invoke(self, context, event):
+
+        from phobos.utils.naming import getObjectName
+        
+        for obj in context.selected_objects:
+            if obj.phobostype == 'link':     
+                item = self.operator_data.add()
+                item.name = getObjectName(obj, 'joint')
+                item.set(bpy.props.EnumProperty(
+                    items = self.datalist,
+                    name = getObjectName(obj, 'joint'),
+                    description = "Data available", 
+                    default = None
+                )
+                )
+
+        return context.window_manager.invoke_props_dialog(self)
+
+    def draw(self, context):
+        """
+
+        Args:
+          context: 
+
+        Returns:
+
+        """ 
+
+        # Create a list of properties for the joints
+        
+        layout = self.layout
+        for i in range(len(self.operator_data)):
+            print((self.operator_data[i]).enum)
+            layout.prop(self.operator_data[i], 'enum', text = self.operator_data[i].name)
+                    
+
+    def check(self, context):
+
+        return True
+    
+    def execute(self, context):
+        from phobos.utils.editing import parentObjectsTo
+
+        # Do something
+
+        return {'FINISHED'}
+
