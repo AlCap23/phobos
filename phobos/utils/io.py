@@ -718,9 +718,18 @@ def create_Reachability(obj, column_dict, name, size, shape):
         for point_index, point in enumerate(coordinates):
             column_offset = point_index * 4
             row_offset = j * 4 * num_points
-            local_pixels[row_offset + column_offset] =  1 - normalized[point_index] 
-            local_pixels[row_offset + column_offset +1] =  normalized[point_index]
-            local_pixels[row_offset + column_offset + 2] = 0 
+            # TODO Delete me
+            #if normalized[point_index] <= 0.5:
+            #    r = 0
+            #    g = 2*normalized[point_index]
+            #    b = 1 - 2*normalized[point_index]
+            #else:
+            #    r = 2*normalized[point_index] - 1
+            #    g = 1 - 2*(normalized[point_index]-0.5) 
+            #    b = 0
+            local_pixels[row_offset + column_offset] =  0 if normalized[point_index] <= 0.5 else 2.*(normalized[point_index] - 0.5)
+            local_pixels[row_offset + column_offset + 1] =  2.*normalized[point_index] if normalized[point_index] <= 0.5 else 1.-2.*(normalized[point_index]-0.5) 
+            local_pixels[row_offset + column_offset + 2] = 2.*(0.5-normalized[point_index]) if normalized[point_index] <= 0.5 else 0
     image.pixels = local_pixels[:]
 
     image_texture_node.image = image
