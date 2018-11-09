@@ -628,15 +628,7 @@ def create_Reachability(obj, column_dict, name, size, shape):
 
     for i in range(vertices.shape[1]):
         coordinates.append(tuple(vertices[:, i]))
-    # Normalize the measurement
-    try:
-        measurement = numpy.array(obj[column_dict['w']])
-        min_val = numpy.max(measurement)
-        max_val = numpy.min(measurement)
-        normalized = (measurement - min_val)/(max_val - min_val)
-    except:
-        log("No measurement data found!", level = "ERROR")
-        pass
+    
 
     # Start the visualization
 
@@ -706,32 +698,34 @@ def create_Reachability(obj, column_dict, name, size, shape):
         image_texture_node = node_tree.nodes.new("ShaderNodeTexImage")
     node_tree.links.new(image_texture_node.outputs['Color'], diffuse_node.inputs['Color'])
     
-    vis_image_height = 1
-    
     # To view the texture we set the height of the texture to vis_image_height 
+    vis_image_height = 1
     image = bpy.data.images.new('ParticleColor', len(coordinates), vis_image_height)
-
     local_pixels = list(image.pixels[:])
     num_points = vertices.shape[1]
+    
+    
+    # Normalize the measurement
+    if column_dict['w']:
+        try:
+            measurement = numpy.array(obj[column_dict['w']])
+            min_val = numpy.max(measurement)
+            max_val = numpy.min(measurement)
+            normalized = (measurement - min_val)/(max_val - min_val)
+        except:
+            log("No measurement data found!", level = "ERROR")
+            pass
+        
 
-    for j in range(vis_image_height):
-        for point_index, point in enumerate(coordinates):
-            column_offset = point_index * 4
-            row_offset = j * 4 * num_points
-            # TODO Delete me
-            #if normalized[point_index] <= 0.5:
-            #    r = 0
-            #    g = 2*normalized[point_index]
-            #    b = 1 - 2*normalized[point_index]
-            #else:
-            #    r = 2*normalized[point_index] - 1
-            #    g = 1 - 2*(normalized[point_index]-0.5) 
-            #    b = 0
-            local_pixels[row_offset + column_offset] =  0 if normalized[point_index] <= 0.5 else 2.*(normalized[point_index] - 0.5)
-            local_pixels[row_offset + column_offset + 1] =  2.*normalized[point_index] if normalized[point_index] <= 0.5 else 1.-2.*(normalized[point_index]-0.5) 
-            local_pixels[row_offset + column_offset + 2] = 2.*(0.5-normalized[point_index]) if normalized[point_index] <= 0.5 else 0
-    image.pixels = local_pixels[:]
-
+        for j in range(vis_image_height):
+            for point_index, point in enumerate(coordinates):
+                column_offset = point_index * 4
+                row_offset = j * 4 * num_points
+                local_pixels[row_offset + column_offset] =  0 if normalized[point_index] <= 0.5 else 2.*(normalized[point_index] - 0.5)
+                local_pixels[row_offset + column_offset + 1] =  2.*normalized[point_index] if normalized[point_index] <= 0.5 else 1.-2.*(normalized[point_index]-0.5) 
+                local_pixels[row_offset + column_offset + 2] = 2.*(0.5-normalized[point_index]) if normalized[point_index] <= 0.5 else 0
+        image.pixels = local_pixels[:]
+    
     image_texture_node.image = image
     particle_info_node = node_tree.nodes.new('ShaderNodeParticleInfo')
     divide_node = node_tree.nodes.new('ShaderNodeMath')
@@ -750,7 +744,6 @@ def create_Reachability(obj, column_dict, name, size, shape):
         settings.use_advanced_hair = True
         settings.emit_from = 'VERT'
         settings.count = len(coordinates)
-        # The final object extent is hair_length * obj.scale 
         settings.hair_length = 100           # This must not be 0
         settings.use_emit_random = False
         settings.render_type = 'OBJECT'

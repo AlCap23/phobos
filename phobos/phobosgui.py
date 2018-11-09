@@ -1414,6 +1414,32 @@ def get_operator_manuals():
     )
     return url_manual_prefix, url_manual_ops
 
+class PhobosDataDisplayPanel(bpy.types.Panel):
+    """
+    """
+
+    bl_idname = "TOOLS_DATA_DISPLAY"
+    bl_label = "Data Visualization"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'TOOLS'
+    bl_category = 'Phobos'
+
+    def draw_header(self, context):
+        self.layout.label(icon_value = phobosIcon)
+    
+    def draw(self, context):
+        wm = context.window_manager
+        layout = self.layout
+
+        self.layout.operator("phobos.import_csv_data", text = "Import CSV Data", icon= "IMPORT")
+        
+        # Add the data vizualization op
+        if context.selected_objects is not None and bool(
+            {'data'}
+            & set([o.phobostype for o in context.selected_objects])
+        ):
+            self.layout.operator("phobos.draw_dexterity", text = "Draw Point Cloud", icon='WORLD_DATA')
+        
 
 class PhobosDisplayPanel(bpy.types.Panel):
     """TODO Missing documentation"""
@@ -1465,9 +1491,9 @@ class PhobosDisplayPanel(bpy.types.Panel):
             dc2.prop(wm, 'phobos_msg_count')
             dc2.prop(wm, 'phobos_msg_offset')
         # Add the import data panel
-        self.layout.operator("phobos.import_csv_data", text = "Import CSV Data", icon= "IMPORT")
-        self.layout.operator("phobos.draw_dexterity", text = "Draw Reachability Map", icon='WORLD_DATA')
-        self.layout.operator("phobos.animate_csv", text = "Animate Data", icon='WORLD_DATA')
+        
+        
+        
 
 def register():
     """TODO Missing documentation"""
