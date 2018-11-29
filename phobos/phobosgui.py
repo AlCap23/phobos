@@ -1414,6 +1414,9 @@ def get_operator_manuals():
     )
     return url_manual_prefix, url_manual_ops
 
+
+
+
 class PhobosDataDisplayPanel(bpy.types.Panel):
     """
     """
@@ -1428,17 +1431,32 @@ class PhobosDataDisplayPanel(bpy.types.Panel):
         self.layout.label(icon_value = phobosIcon)
     
     def draw(self, context):
+        from phobos.utils.naming import getObjectName
+
         wm = context.window_manager
+
+        # Gather the links
+        linklist = [getObjectName(obj, 'joint') for obj in context.selected_objects if obj.phobostype == 'link']
+        dataEnum = wm.dataEnum
+
         layout = self.layout
 
-        self.layout.operator("phobos.import_csv_data", text = "Import CSV Data", icon= "IMPORT")
+        layout.operator("phobos.import_csv_data", text = "Import CSV Data", icon= "IMPORT")
         
         # Add the data vizualization op
         if context.selected_objects is not None and bool(
             {'data'}
             & set([o.phobostype for o in context.selected_objects])
         ):
-            self.layout.operator("phobos.draw_dexterity", text = "Draw Point Cloud", icon='WORLD_DATA')
+            layout.operator("phobos.draw_dexterity", text = "Draw Point Cloud", icon='WORLD_DATA')
+        
+        if context.selected_objects is not None and bool(
+            {'data'}
+            & set([o.phobostype for o in context.selected_objects])
+        ):
+            for link in linklist:
+                layout.prop(wm, "dataEnum", text = link, expand = False)
+            
         
 
 class PhobosDisplayPanel(bpy.types.Panel):
@@ -1538,6 +1556,23 @@ def register():
 
     bpy.types.WindowManager.progress = FloatProperty(
         name='Progress', default=0, description="Progress value of custom Phobos progress bar."
+    )
+
+    # Add animation enum to windowmanager
+
+    def datalist(self, context):
+        # creating property for storing the path to the .scn file
+        items = []
+        for obj in context.selected_objects:
+            if obj.phobostype == 'data':
+                items += [(prop, prop, '' )for prop in obj.keys() if 'data/' in prop]
+        return items
+
+    bpy.types.WindowManager.dataEnum = EnumProperty(
+        items = datalist,
+        description = "Available data",
+        name = "", 
+        default = None
     )
 
     # add i/o settings to scene to preserve settings for every model
